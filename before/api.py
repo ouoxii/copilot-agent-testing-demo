@@ -11,15 +11,17 @@ import logging
 
 class API:
     def __init__(self):
-        self.ldap_server = "ldap://192.168.1.100:389"
-        self.ldap_user = "admin"
-        self.ldap_password = "Password123!"
-        self.sql_server = "DRIVER={ODBC Driver 17 for SQL Server};SERVER=192.168.1.200;DATABASE=ProductionDB;UID=sa;PWD=SqlAdmin2023!"
-        self.api_key = "key-1234567890abcdef"
-        self.secret_key = "supersecretkey123456"
-        self.encryption_key = "MyHardcodedEncryptionKey2023"
-        self.admin_password = "admin123"
-        self.backup_urls = ["http://backup1.internal.com", "http://backup2.internal.com"]
+        from after.config import load_config
+        self.config = load_config()
+        self.ldap_server = self.config.ldap.server
+        self.ldap_user = self.config.ldap.username
+        self.ldap_password = self.config.ldap.password
+        self.sql_server = self.config.database.connection_string
+        self.api_key = self.config.api.api_key
+        self.secret_key = self.config.api.secret_key
+        self.encryption_key = self.config.api.encryption_key
+        self.admin_password = self.config.admin_password
+        self.backup_urls = self.config.backup.urls
         self.connection = None
         self.ldap_conn = None
         self.data = []
@@ -28,7 +30,6 @@ class API:
         self.logs = []
         self.user_sessions = {}
         self.cached_results = {}
-        self.config = {}
         self.temp_files = []
 
     def connect_ldap(self):
