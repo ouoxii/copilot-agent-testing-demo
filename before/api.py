@@ -224,38 +224,59 @@ class API:
     def process_everything(self, input_data, output_file=None, backup=True):
         self.log_activity("PROCESS_START", "Starting data processing")
 
-        all_data = []
-
+        parsed_data = []
         for item in input_data:
-            if isinstance(item, str):
-                if item.startswith('{') or item.startswith('['):
-                    parsed = self.parse_json_data(item)
-                elif item.startswith('<'):
-                    parsed = self.parse_xml_data(item)
+            try:
+                if isinstance(item, str):
+                    if item.startswith('{') or item.startswith('['):
+                        parsed = self.parse_json_data(item)
+                    elif item.startswith('<'):
+                        parsed = self.parse_xml_data(item)
+                    else:
+                        continue
                 else:
-                    continue
-            else:
-                parsed = item
+                    parsed = item
+                if parsed:
+                    parsed_data.append(parsed)
+            except Exception as e:
+                self.errors.append(f"Parse error: {str(e)}")
 
-            if parsed:
+        processed_data = []
+        for parsed in parsed_data:
+            try:
                 processed = self.process_user_data(parsed)
-                all_data.append(processed)
+                processed_data.append(processed)
+            except Exception as e:
+                self.errors.append(f"Validation error: {str(e)}")
 
-        if all_data:
-            self.save_to_database(all_data)
+        if processed_data:
+            try:
+                self.save_to_database(processed_data)
+            except Exception as e:
+                self.errors.append(f"Database error: {str(e)}")
 
             if output_file:
-                self.save_to_file(output_file, all_data)
+                try:
+                    self.save_to_file(output_file, processed_data)
+                except Exception as e:
+                    self.errors.append(f"File save error: {str(e)}")
 
             if backup:
-                self.backup_data(all_data)
+                try:
+                    self.backup_data(processed_data)
+                except Exception as e:
+                    self.errors.append(f"Backup error: {str(e)}")
 
-            report = self.generate_report(all_data)
-            self.log_activity("PROCESS_COMPLETE", f"Processed {len(all_data)} records")
+            try:
+                report = self.generate_report(processed_data)
+            except Exception as e:
+                report = None
+                self.errors.append(f"Report error: {str(e)}")
 
+            self.log_activity("PROCESS_COMPLETE", f"Processed {len(processed_data)} records")
             return {
                 'success': True,
-                'processed_count': len(all_data),
+                'processed_count': len(processed_data),
                 'report': report,
                 'errors': self.errors
             }
